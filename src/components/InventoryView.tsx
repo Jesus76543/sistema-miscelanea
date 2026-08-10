@@ -4,70 +4,111 @@ import {
   Plus, 
   Edit, 
   Trash2, 
-  AlertTriangle, 
   Check, 
   X, 
   PackageOpen, 
-  ArrowUpDown
+  LayoutGrid, 
+  List, 
+  Truck, 
+  ClipboardList, 
+  Printer 
 } from 'lucide-react';
-import type { Product } from './POSView';
+import { soundManager } from '../utils/audio';
+import type { Product } from '../data/initialProducts';
 
 interface InventoryViewProps {
   products: Product[];
   onAddProduct: (product: Product) => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (id: string) => void;
+  onQuickUpdateStock: (id: string, delta: number) => void;
 }
 
 export const InventoryView: React.FC<InventoryViewProps> = ({ 
   products, 
   onAddProduct, 
   onEditProduct, 
-  onDeleteProduct 
+  onDeleteProduct,
+  onQuickUpdateStock
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [filterStockStatus, setFilterStockStatus] = useState<'all' | 'low' | 'out'>('all');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+
+  // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRestockListOpen, setIsRestockListOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Form states
   const [formId, setFormId] = useState('');
   const [formName, setFormName] = useState('');
   const [formCategory, setFormCategory] = useState('Abarrotes');
-  const [formCustomCategory, setFormCustomCategory] = useState('');
   const [formPrice, setFormPrice] = useState('');
   const [formCost, setFormCost] = useState('');
   const [formStock, setFormStock] = useState('');
-  const [formMinStock, setFormMinStock] = useState('');
+  const [formMinStock, setFormMinStock] = useState('5');
+  const [formUnit, setFormUnit] = useState<'pza' | 'kg' | 'paq' | 'litro'>('pza');
+  const [formSupplier, setFormSupplier] = useState('');
+  const [formEmoji, setFormEmoji] = useState('📦');
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Extract unique categories
+  // Categories list
   const categories = useMemo(() => {
     const cats = new Set(products.map(p => p.category));
     return ['Todos', ...Array.from(cats)];
   }, [products]);
 
-  // Filter products based on search and category
+  // Filtered Products
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchesCategory = selectedCategory === 'Todos' || p.category === selectedCategory;
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            p.id.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+                            p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (p.supplier && p.supplier.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      let matchesStock = true;
+      if (filterStockStatus === 'low') matchesStock = p.stock <= p.minStock && p.stock > 0;
+      if (filterStockStatus === 'out') matchesStock = p.stock <= 0;
+
+      return matchesCategory && matchesSearch && matchesStock;
     });
-  }, [products, selectedCategory, searchQuery]);
+  }, [products, selectedCategory, searchQuery, filterStockStatus]);
+
+  // Suggested Restock List (Products with stock <= minStock)
+  const restockList = useMemo(() => {
+    return products
+      .filter(p => p.stock <= p.minStock)
+      .map(p => ({
+        ...p,
+        suggestedQuantity: Math.max(12, p.minStock * 3) - p.stock
+      }));
+  }, [products]);
+
+  // Profit Margin Calculator Helper
+  const calculatedMargin = useMemo(() => {
+    const p = parseFloat(formPrice);
+    const c = parseFloat(formCost);
+    if (!isNaN(p) && !isNaN(c) && p > 0) {
+      return (((p - c) / p) * 100).toFixed(1);
+    }
+    return '0.0';
+  }, [formPrice, formCost]);
 
   // Open modal for adding
   const handleOpenAdd = () => {
     setEditingProduct(null);
-    setFormId('COD-' + Math.floor(100000 + Math.random() * 900000));
+    setFormId('750' + Math.floor(1000000000 + Math.random() * 9000000000));
     setFormName('');
     setFormCategory('Abarrotes');
-    setFormCustomCategory('');
     setFormPrice('');
     setFormCost('');
-    setFormStock('');
+    setFormStock('10');
     setFormMinStock('5');
+    setFormUnit('pza');
+    setFormSupplier('');
+    setFormEmoji('📦');
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -77,39 +118,30 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     setEditingProduct(product);
     setFormId(product.id);
     setFormName(product.name);
-    
-    const standardCategories = ['Abarrotes', 'Bebidas', 'Botanas', 'Lácteos', 'Panadería', 'Limpieza', 'Otros'];
-    if (standardCategories.includes(product.category)) {
-      setFormCategory(product.category);
-      setFormCustomCategory('');
-    } else {
-      setFormCategory('Otro Personalizado');
-      setFormCustomCategory(product.category);
-    }
-    
+    setFormCategory(product.category);
     setFormPrice(product.price.toString());
     setFormCost(product.cost.toString());
     setFormStock(product.stock.toString());
     setFormMinStock(product.minStock.toString());
+    setFormUnit(product.unit || 'pza');
+    setFormSupplier(product.supplier || '');
+    setFormEmoji(product.emoji || '📦');
     setFormError(null);
     setIsModalOpen(true);
   };
 
-  // Delete product
   const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar el producto "${name}"? Esta acción no se puede deshacer.`)) {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar "${name}" del catálogo?`)) {
       onDeleteProduct(id);
+      soundManager.playError();
     }
   };
 
-  // Submit form
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
-    // Validation
     const name = formName.trim();
-    const finalCategory = formCategory === 'Otro Personalizado' ? formCustomCategory.trim() : formCategory;
     const price = parseFloat(formPrice);
     const cost = parseFloat(formCost);
     const stock = parseInt(formStock);
@@ -119,41 +151,30 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       setFormError('El nombre del producto es obligatorio.');
       return;
     }
-    if (!finalCategory) {
-      setFormError('La categoría es obligatoria.');
-      return;
-    }
     if (isNaN(price) || price < 0) {
-      setFormError('El precio de venta debe ser un número válido mayor o igual a 0.');
+      setFormError('El precio de venta no es válido.');
       return;
     }
     if (isNaN(cost) || cost < 0) {
-      setFormError('El costo de compra debe ser un número válido mayor o igual a 0.');
+      setFormError('El costo de compra no es válido.');
       return;
     }
     if (isNaN(stock) || stock < 0) {
-      setFormError('El stock inicial debe ser un número entero mayor o igual a 0.');
-      return;
-    }
-    if (isNaN(minStock) || minStock < 0) {
-      setFormError('El stock mínimo debe ser un número entero mayor o igual a 0.');
-      return;
-    }
-
-    // Check code availability for new products
-    if (!editingProduct && products.some(p => p.id === formId)) {
-      setFormError('El código de barras ya está registrado en otro producto.');
+      setFormError('El stock debe ser 0 o superior.');
       return;
     }
 
     const productData: Product = {
-      id: formId.trim() || 'COD-' + Math.floor(100000 + Math.random() * 900000),
+      id: formId.trim() || 'SKU-' + Date.now(),
       name,
-      category: finalCategory,
+      category: formCategory,
       price,
       cost,
       stock,
-      minStock
+      minStock,
+      unit: formUnit,
+      supplier: formSupplier.trim() || undefined,
+      emoji: formEmoji
     };
 
     if (editingProduct) {
@@ -163,84 +184,85 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     }
 
     setIsModalOpen(false);
+    soundManager.playCashRegister();
   };
 
   return (
-    <div className="inventory-container animate-fade-in">
+    <div className="view-container animate-fade-in" style={{ paddingBottom: '3rem' }}>
       {/* Header */}
-      <div className="page-header">
-        <div className="page-title-group">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <PackageOpen size={28} className="gradient-text-accent" />
-          <h2 className="page-title">Control de Inventario</h2>
-          <span style={{ fontSize: '0.85rem', background: 'var(--primary-glow)', color: 'var(--primary)', padding: '0.25rem 0.6rem', borderRadius: '50px', fontWeight: 'bold' }}>
-            {products.length} Productos
-          </span>
-        </div>
-        
-        <button className="btn-primary" onClick={handleOpenAdd}>
-          <Plus size={18} />
-          <span>Agregar Producto</span>
-        </button>
-      </div>
-
-      {/* Stats Cards Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-        <div className="glass" style={{ padding: '1.25rem', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Total en Stock</span>
-            <div style={{ fontSize: '1.5rem', fontWeight: '800', marginTop: '0.25rem' }}>
-              {products.reduce((sum, p) => sum + p.stock, 0)} unidades
-            </div>
-          </div>
-          <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'var(--primary-glow)', color: 'var(--primary)' }}>
-            <PackageOpen size={22} />
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Control de Inventario y Catálogo</h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              {products.length} productos registrados • Valuación de inventario: <b>${products.reduce((s, p) => s + (p.cost * p.stock), 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</b> (Costo)
+            </p>
           </div>
         </div>
 
-        <div className="glass" style={{ padding: '1.25rem', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Productos Stock Bajo</span>
-            <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--danger)', marginTop: '0.25rem' }}>
-              {products.filter(p => p.stock <= p.minStock).length} Alertas
-            </div>
-          </div>
-          <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'var(--danger-glow)', color: 'var(--danger)' }}>
-            <AlertTriangle size={22} />
-          </div>
-        </div>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button className="btn-secondary" onClick={() => setIsRestockListOpen(true)}>
+            <ClipboardList size={16} />
+            <span>Lista de Resurtido ({restockList.length})</span>
+          </button>
 
-        <div className="glass" style={{ padding: '1.25rem', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Valor del Inventario (Venta)</span>
-            <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--primary)', marginTop: '0.25rem' }}>
-              ${products.reduce((sum, p) => sum + (p.price * p.stock), 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-          </div>
-          <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'var(--primary-glow)', color: 'var(--primary)' }}>
-            <ArrowUpDown size={22} />
-          </div>
+          <button className="btn-primary" onClick={handleOpenAdd}>
+            <Plus size={18} />
+            <span>Registrar Producto</span>
+          </button>
         </div>
       </div>
 
-      {/* Filters & Search */}
-      <div className="glass" style={{ padding: '1rem', borderRadius: 'var(--radius-md)', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
-          <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={18} />
-          <input
-            type="text"
-            placeholder="Buscar por nombre o código de barras..."
-            className="input-styled"
-            style={{ paddingLeft: '2.5rem', paddingTop: '0.65rem', paddingBottom: '0.65rem', fontSize: '0.9rem' }}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      {/* KPI Cards Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+        <div className="glass" style={{ padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', borderLeft: '4px solid var(--primary)' }}>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Unidades en Existencia</div>
+          <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.25rem' }}>
+            {products.reduce((sum, p) => sum + p.stock, 0)} unidades
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Categoría:</span>
+        <div 
+          className="glass" 
+          style={{ padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', borderLeft: '4px solid var(--danger)', cursor: 'pointer' }}
+          onClick={() => setFilterStockStatus(filterStockStatus === 'low' ? 'all' : 'low')}
+        >
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Stock Bajo (Por agotarse)</div>
+          <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--danger)', marginTop: '0.25rem' }}>
+            {products.filter(p => p.stock <= p.minStock && p.stock > 0).length} Alertas
+          </div>
+        </div>
+
+        <div 
+          className="glass" 
+          style={{ padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', borderLeft: '4px solid var(--accent)', cursor: 'pointer' }}
+          onClick={() => setFilterStockStatus(filterStockStatus === 'out' ? 'all' : 'out')}
+        >
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Productos Agotados (0 u.)</div>
+          <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--accent)', marginTop: '0.25rem' }}>
+            {products.filter(p => p.stock <= 0).length} sin stock
+          </div>
+        </div>
+      </div>
+
+      {/* Filter and View Controls Bar */}
+      <div className="glass" style={{ padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flex: 1, minWidth: '280px' }}>
+          <div className="search-input-wrapper" style={{ flex: 1 }}>
+            <Search className="search-icon" size={18} />
+            <input
+              type="text"
+              placeholder="Buscar por código de barras, nombre o proveedor..."
+              className="input-styled"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
           <select
             className="select-styled"
-            style={{ padding: '0.65rem 2rem 0.65rem 1rem', fontSize: '0.9rem' }}
+            style={{ width: 'auto', minWidth: '180px' }}
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
           >
@@ -249,85 +271,146 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             ))}
           </select>
         </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button 
+            className={`btn-secondary ${filterStockStatus === 'all' ? 'active' : ''}`}
+            style={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem' }}
+            onClick={() => setFilterStockStatus('all')}
+          >
+            Todos
+          </button>
+          <button 
+            className={`btn-secondary ${filterStockStatus === 'low' ? 'active' : ''}`}
+            style={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: 'var(--danger)' }}
+            onClick={() => setFilterStockStatus('low')}
+          >
+            Stock Bajo
+          </button>
+          <button 
+            className={`btn-secondary ${filterStockStatus === 'out' ? 'active' : ''}`}
+            style={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem', color: 'var(--accent)' }}
+            onClick={() => setFilterStockStatus('out')}
+          >
+            Agotados
+          </button>
+
+          <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 0.25rem' }}></div>
+
+          <button 
+            className={`icon-btn ${viewMode === 'table' ? 'active' : ''}`}
+            onClick={() => setViewMode('table')}
+            title="Vista en Tabla"
+          >
+            <List size={18} />
+          </button>
+          <button 
+            className={`icon-btn ${viewMode === 'grid' ? 'active' : ''}`}
+            onClick={() => setViewMode('grid')}
+            title="Vista en Cuadrícula"
+          >
+            <LayoutGrid size={18} />
+          </button>
+        </div>
       </div>
 
-      {/* Table */}
+      {/* Content: Table View vs Grid View */}
       {filteredProducts.length === 0 ? (
         <div className="glass empty-state" style={{ borderRadius: 'var(--radius-lg)' }}>
           <PackageOpen size={48} />
-          <h3>No hay productos en inventario</h3>
-          <p>No se encontraron productos con los filtros seleccionados. Intenta agregar uno nuevo.</p>
+          <h3>No se encontraron productos</h3>
+          <p>Prueba con otros términos de búsqueda o agrega un nuevo producto.</p>
         </div>
-      ) : (
+      ) : viewMode === 'table' ? (
         <div className="glass table-wrapper">
           <table className="table-styled">
             <thead>
               <tr>
-                <th>Código/Barras</th>
-                <th>Nombre</th>
+                <th style={{ width: '40px' }}>Icon</th>
+                <th>Código de Barras</th>
+                <th>Descripción</th>
                 <th>Categoría</th>
-                <th style={{ textAlign: 'right' }}>Costo Compra</th>
-                <th style={{ textAlign: 'right' }}>Precio Venta</th>
-                <th style={{ textAlign: 'right' }}>Stock</th>
-                <th>Stock Mín.</th>
-                <th>Estado</th>
+                <th>Proveedor</th>
+                <th style={{ textAlign: 'right' }}>Costo</th>
+                <th style={{ textAlign: 'right' }}>Venta</th>
+                <th style={{ textAlign: 'center' }}>% Margen</th>
+                <th style={{ textAlign: 'center' }}>Stock Actual</th>
+                <th style={{ textAlign: 'center' }}>Ajuste Rápido</th>
                 <th style={{ textAlign: 'center' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredProducts.map(product => {
                 const isLowStock = product.stock <= product.minStock;
+                const margin = product.price > 0 ? (((product.price - product.cost) / product.price) * 100).toFixed(0) : '0';
 
                 return (
                   <tr key={product.id}>
-                    <td style={{ fontFamily: 'monospace', fontWeight: '500', color: 'var(--secondary)' }}>
+                    <td style={{ fontSize: '1.25rem' }}>{product.emoji || '📦'}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--secondary)', fontWeight: 600 }}>
                       {product.id}
                     </td>
-                    <td style={{ fontWeight: '600' }}>{product.name}</td>
+                    <td style={{ fontWeight: 700 }}>{product.name}</td>
                     <td>
                       <span className="badge-category">{product.category}</span>
+                    </td>
+                    <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      {product.supplier || 'N/A'}
                     </td>
                     <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
                       ${product.cost.toFixed(2)}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--primary)' }}>
+                    <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--primary)' }}>
                       ${product.price.toFixed(2)}
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: '700' }}>
-                      {product.stock}
-                    </td>
-                    <td style={{ color: 'var(--text-muted)' }}>
-                      {product.minStock} u.
-                    </td>
-                    <td>
-                      <span className={`badge-stock ${isLowStock ? 'low' : 'normal'}`}>
-                        {isLowStock ? (
-                          <>
-                            <AlertTriangle size={12} />
-                            <span>Stock Bajo</span>
-                          </>
-                        ) : (
-                          <>
-                            <Check size={12} />
-                            <span>Ok</span>
-                          </>
-                        )}
+                    <td style={{ textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#c7d2fe' }}>
+                        {margin}%
                       </span>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <div className="action-btn-group" style={{ justifyContent: 'center' }}>
+                      <span className={`badge-stock ${isLowStock ? 'low' : 'normal'}`}>
+                        {product.stock <= 0 ? 'Agotado' : `${product.stock} ${product.unit}`}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'center' }}>
                         <button 
-                          className="icon-btn edit" 
-                          onClick={() => handleOpenEdit(product)}
-                          title="Editar Producto"
+                          className="quick-stock-btn" 
+                          title="Restar 1 unidad"
+                          onClick={() => onQuickUpdateStock(product.id, -1)}
                         >
-                          <Edit size={16} />
+                          -1
                         </button>
                         <button 
-                          className="icon-btn delete" 
-                          onClick={() => handleDelete(product.id, product.name)}
-                          title="Eliminar Producto"
+                          className="quick-stock-btn" 
+                          title="Sumar 1 unidad"
+                          onClick={() => onQuickUpdateStock(product.id, 1)}
                         >
+                          +1
+                        </button>
+                        <button 
+                          className="quick-stock-btn" 
+                          title="Sumar paquete (+5)"
+                          onClick={() => onQuickUpdateStock(product.id, 5)}
+                        >
+                          +5
+                        </button>
+                        <button 
+                          className="quick-stock-btn" 
+                          title="Sumar caja (+10)"
+                          onClick={() => onQuickUpdateStock(product.id, 10)}
+                        >
+                          +10
+                        </button>
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'center' }}>
+                        <button className="icon-btn" onClick={() => handleOpenEdit(product)} title="Editar">
+                          <Edit size={16} />
+                        </button>
+                        <button className="icon-btn" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(product.id, product.name)} title="Eliminar">
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -338,176 +421,255 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </tbody>
           </table>
         </div>
+      ) : (
+        /* Grid Card View */
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+          {filteredProducts.map(product => {
+            const isLowStock = product.stock <= product.minStock;
+            const margin = product.price > 0 ? (((product.price - product.cost) / product.price) * 100).toFixed(0) : '0';
+
+            return (
+              <div key={product.id} className="glass glass-hover" style={{ padding: '1.25rem', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '190px' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '1.5rem' }}>{product.emoji || '📦'}</span>
+                    <span className={`badge-stock ${isLowStock ? 'low' : 'normal'}`}>
+                      {product.stock <= 0 ? 'Agotado' : `Stock: ${product.stock}`}
+                    </span>
+                  </div>
+
+                  <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.25rem' }}>{product.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--secondary)', fontFamily: 'var(--font-mono)' }}>{product.id}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{product.supplier || 'Proveedor estándar'}</div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Costo: ${product.cost.toFixed(2)} ({margin}%)</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)' }}>${product.price.toFixed(2)}</div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.25rem' }}>
+                    <button className="icon-btn" onClick={() => handleOpenEdit(product)}>
+                      <Edit size={16} />
+                    </button>
+                    <button className="icon-btn" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(product.id, product.name)}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
-      {/* Add / Edit Modal */}
+      {/* Modal: Add/Edit Product */}
       {isModalOpen && (
         <div className="modal-overlay">
-          <div className="glass modal-content" style={{ background: '#111827', border: '1px solid var(--border-color)', maxWidth: '550px' }}>
-            <button 
-              className="icon-btn" 
-              onClick={() => setIsModalOpen(false)}
-              style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', color: 'var(--text-secondary)' }}
-            >
-              <X size={20} />
+          <div className="modal-content" style={{ maxWidth: '540px' }}>
+            <button className="icon-btn" style={{ position: 'absolute', top: '1rem', right: '1rem' }} onClick={() => setIsModalOpen(false)}>
+              <X size={18} />
             </button>
 
-            <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <PackageOpen size={24} style={{ color: 'var(--primary)' }} />
+            <h3 className="modal-title">
+              <PackageOpen size={22} style={{ color: 'var(--primary)' }} />
               <span>{editingProduct ? 'Editar Producto' : 'Registrar Nuevo Producto'}</span>
             </h3>
 
             <form onSubmit={handleSubmit}>
               <div className="form-grid">
-                
-                <div className="form-group span-2">
-                  <label className="form-label" htmlFor="form-id">Código de Barras / SKU</label>
+                <div className="form-group">
+                  <label className="form-label">Código de Barras / SKU</label>
                   <input
-                    id="form-id"
                     type="text"
                     className="input-styled"
                     value={formId}
                     onChange={(e) => setFormId(e.target.value)}
-                    placeholder="Generando código..."
-                    disabled={!!editingProduct} // Cannot change SKU/Code of existing product
                     required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Ícono / Emoji</label>
+                  <input
+                    type="text"
+                    className="input-styled"
+                    value={formEmoji}
+                    onChange={(e) => setFormEmoji(e.target.value)}
                   />
                 </div>
 
                 <div className="form-group span-2">
-                  <label className="form-label" htmlFor="form-name">Nombre del Producto</label>
+                  <label className="form-label">Nombre del Producto</label>
                   <input
-                    id="form-name"
                     type="text"
                     className="input-styled"
+                    placeholder="Ej. Coca-Cola 600ml Desechable"
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
-                    placeholder="Ej. Refresco de Cola 600ml"
                     required
+                    autoFocus
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="form-category">Categoría</label>
+                  <label className="form-label">Categoría</label>
                   <select
-                    id="form-category"
                     className="select-styled"
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
                   >
-                    <option value="Abarrotes">Abarrotes</option>
                     <option value="Bebidas">Bebidas</option>
                     <option value="Botanas">Botanas</option>
-                    <option value="Lácteos">Lácteos</option>
                     <option value="Panadería">Panadería</option>
+                    <option value="Lácteos">Lácteos</option>
+                    <option value="Abarrotes">Abarrotes</option>
                     <option value="Limpieza">Limpieza</option>
-                    <option value="Otros">Otros</option>
-                    <option value="Otro Personalizado">Otro Personalizado...</option>
+                    <option value="Dulces">Dulces</option>
+                    <option value="Varios">Varios</option>
                   </select>
                 </div>
 
                 <div className="form-group">
-                  {formCategory === 'Otro Personalizado' ? (
-                    <>
-                      <label className="form-label" htmlFor="form-custom-category">Escribe la Categoría</label>
-                      <input
-                        id="form-custom-category"
-                        type="text"
-                        className="input-styled"
-                        value={formCustomCategory}
-                        onChange={(e) => setFormCustomCategory(e.target.value)}
-                        placeholder="Ej. Farmacia"
-                        required
-                      />
-                    </>
-                  ) : (
-                    <div style={{ opacity: 0.5 }}>
-                      <label className="form-label">Categoría Especial</label>
-                      <input type="text" className="input-styled" disabled placeholder="N/A" />
-                    </div>
-                  )}
+                  <label className="form-label">Proveedor</label>
+                  <input
+                    type="text"
+                    className="input-styled"
+                    placeholder="Ej. Bimbo, Coca-Cola, Sabritas"
+                    value={formSupplier}
+                    onChange={(e) => setFormSupplier(e.target.value)}
+                  />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="form-cost">Costo de Compra ($)</label>
+                  <label className="form-label">Costo Proveedor ($)</label>
                   <input
-                    id="form-cost"
                     type="number"
-                    step="0.01"
+                    step="0.50"
                     className="input-styled"
+                    placeholder="0.00"
                     value={formCost}
                     onChange={(e) => setFormCost(e.target.value)}
-                    placeholder="0.00"
                     required
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="form-price">Precio de Venta ($)</label>
+                  <label className="form-label">Precio al Público ($)</label>
                   <input
-                    id="form-price"
                     type="number"
-                    step="0.01"
+                    step="0.50"
                     className="input-styled"
+                    placeholder="0.00"
                     value={formPrice}
                     onChange={(e) => setFormPrice(e.target.value)}
-                    placeholder="0.00"
                     required
                   />
                 </div>
 
+                <div className="form-group span-2" style={{ background: 'var(--secondary-glow)', padding: '0.65rem', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#c7d2fe', fontWeight: 600 }}>Margen de Ganancia Estimado:</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff' }}>{calculatedMargin}%</span>
+                </div>
+
                 <div className="form-group">
-                  <label className="form-label" htmlFor="form-stock">Stock Inicial (unidades)</label>
+                  <label className="form-label">Stock en Tienda</label>
                   <input
-                    id="form-stock"
                     type="number"
                     className="input-styled"
                     value={formStock}
                     onChange={(e) => setFormStock(e.target.value)}
-                    placeholder="0"
                     required
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="form-min-stock">Stock Mínimo (alerta)</label>
+                  <label className="form-label">Stock Mínimo (Alerta)</label>
                   <input
-                    id="form-min-stock"
                     type="number"
                     className="input-styled"
                     value={formMinStock}
                     onChange={(e) => setFormMinStock(e.target.value)}
-                    placeholder="5"
                     required
                   />
                 </div>
-
               </div>
 
               {formError && (
-                <div style={{ color: 'var(--danger)', fontSize: '0.875rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <AlertTriangle size={16} />
-                  <span>{formError}</span>
+                <div style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                  {formError}
                 </div>
               )}
 
-              <div className="modal-footer-btns">
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn-primary"
-                >
-                  <Check size={18} />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
+                <button type="submit" className="btn-primary">
+                  <Check size={16} />
                   <span>{editingProduct ? 'Guardar Cambios' : 'Registrar'}</span>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Suggested Restock List for Suppliers */}
+      {isRestockListOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '580px' }}>
+            <button className="icon-btn" style={{ position: 'absolute', top: '1rem', right: '1rem' }} onClick={() => setIsRestockListOpen(false)}>
+              <X size={18} />
+            </button>
+
+            <h3 className="modal-title">
+              <Truck size={22} style={{ color: 'var(--primary)' }} />
+              <span>Lista de Resurtido Sugerido</span>
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              Productos que están por debajo de su stock mínimo y requieren pedido a proveedores.
+            </p>
+
+            <div className="glass table-wrapper" style={{ maxHeight: '340px', overflowY: 'auto', marginBottom: '1.25rem' }}>
+              {restockList.length === 0 ? (
+                <div className="empty-state">
+                  <Check size={36} style={{ color: 'var(--primary)' }} />
+                  <h4>¡Inventario completo!</h4>
+                  <p>Todos los productos tienen existencias por encima del mínimo.</p>
+                </div>
+              ) : (
+                <table className="table-styled">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Proveedor</th>
+                      <th style={{ textAlign: 'center' }}>Stock Actual</th>
+                      <th style={{ textAlign: 'center' }}>Sugerido a Pedir</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {restockList.map(item => (
+                      <tr key={item.id}>
+                        <td style={{ fontWeight: 600 }}>{item.name}</td>
+                        <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.supplier || 'Varios'}</td>
+                        <td style={{ textAlign: 'center', color: 'var(--danger)', fontWeight: 800 }}>{item.stock} u.</td>
+                        <td style={{ textAlign: 'center', color: 'var(--primary)', fontWeight: 800 }}>+{item.suggestedQuantity} u.</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button className="btn-secondary" onClick={() => window.print()}>
+                <Printer size={16} />
+                <span>Imprimir Lista</span>
+              </button>
+              <button className="btn-primary" onClick={() => setIsRestockListOpen(false)}>
+                Entendido
+              </button>
+            </div>
           </div>
         </div>
       )}
