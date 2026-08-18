@@ -91,6 +91,7 @@ export const POSView: React.FC<POSViewProps> = ({
   const [cashReceived, setCashReceived] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
+  const [showWelcome, setShowWelcome] = useState(true);
 
   // Active Ticket helper
   const activeTicket = useMemo(() => {
@@ -120,7 +121,8 @@ export const POSView: React.FC<POSViewProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F2') {
         e.preventDefault();
-        searchInputRef.current?.focus();
+        setShowWelcome(false);
+        setTimeout(() => searchInputRef.current?.focus(), 20);
       } else if (e.key === 'F4') {
         e.preventDefault();
         if (cart.length > 0) {
@@ -128,6 +130,7 @@ export const POSView: React.FC<POSViewProps> = ({
         }
       } else if (e.key === 'F7') {
         e.preventDefault();
+        setShowWelcome(false);
         handleCreateNewTicket();
       } else if (e.key === 'Escape') {
         setIsCheckoutOpen(false);
@@ -169,6 +172,7 @@ export const POSView: React.FC<POSViewProps> = ({
 
   // Add product to cart with Stock Check & Audio feedback
   const addToCart = (product: Product, quantityToAdd: number = 1) => {
+    setShowWelcome(false);
     if (product.stock <= 0) {
       showError(`¡"${product.name}" no tiene existencias!`);
       soundManager.playError();
@@ -417,100 +421,152 @@ export const POSView: React.FC<POSViewProps> = ({
           </div>
         </div>
 
-        {/* Barcode & Search Input */}
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <div className="search-input-wrapper">
-            <Barcode className="search-icon" size={20} />
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Escanea con pistola de código de barras o escribe el nombre del producto (Presiona Enter)..."
-              className="input-styled"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              autoFocus
-            />
-          </div>
-          {searchQuery && (
+        {/* Catalog Grid or Welcome Panel */}
+        {showWelcome && cart.length === 0 ? (
+          <div className="glass" style={{ padding: '3.5rem 2.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', flex: 1, minHeight: '450px', gap: '1.75rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', marginTop: '0.25rem' }}>
+            <div style={{ background: 'var(--primary-glow)', padding: '1rem', borderRadius: '50%', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyItems: 'center' }}>
+              <ShoppingBasket size={52} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Punto de Venta listo</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.925rem', maxWidth: '400px', margin: '0 auto', lineHeight: '1.5' }}>
+                Registra ventas, consulta precios y controla el inventario de la tienda de forma rápida y sencilla.
+              </p>
+            </div>
             <button 
-              className="btn-secondary" 
-              onClick={() => setSearchQuery('')}
-              style={{ padding: '0 1rem' }}
+              className="btn-primary" 
+              style={{ padding: '0.85rem 2rem', display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.95rem', borderRadius: 'var(--radius-sm)' }}
+              onClick={() => {
+                setShowWelcome(false);
+                setTimeout(() => searchInputRef.current?.focus(), 50);
+              }}
             >
-              Limpiar
+              <span>Comenzar a Vender</span>
+              <PlusCircle size={16} />
             </button>
-          )}
-        </div>
-
-        {/* Error Notification */}
-        {errorMessage && (
-          <div className="glass animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1.25rem', borderLeft: '4px solid var(--danger)', borderRadius: 'var(--radius-sm)', background: 'var(--danger-glow)', color: '#fecaca' }}>
-            <AlertTriangle size={18} style={{ color: 'var(--danger)' }} />
-            <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{errorMessage}</span>
-          </div>
-        )}
-
-        {/* Categories Tabs */}
-        <div className="categories-tabs">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              className={`category-tab ${selectedCategory === cat ? 'active' : ''}`}
-              onClick={() => setSelectedCategory(cat)}
-            >
-              {cat === 'Todos' ? '📂 Todos los Productos' : cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Catalog Grid */}
-        {filteredProducts.length === 0 ? (
-          <div className="glass empty-state" style={{ borderRadius: 'var(--radius-lg)' }}>
-            <ShoppingBasket size={44} />
-            <h3>No se encontraron productos</h3>
-            <p>Intenta buscar por código o nombre.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem 2rem', maxWidth: '420px', margin: '1rem auto 0 auto', padding: '1rem', borderTop: '1px solid var(--border-color)', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                <span style={{ padding: '0.15rem 0.45rem', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>F2</span>
+                <span>Buscar productos</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                <span style={{ padding: '0.15rem 0.45rem', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>F4</span>
+                <span>Cobrar venta</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                <span style={{ padding: '0.15rem 0.45rem', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>F7</span>
+                <span>Nuevo / Cambiar ticket</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                <span style={{ padding: '0.15rem 0.45rem', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>Esc</span>
+                <span>Cerrar diálogos</span>
+              </div>
+            </div>
           </div>
         ) : (
-          <div className="products-grid">
-            {filteredProducts.map(product => {
-              const inCartItem = cart.find(item => item.product.id === product.id);
-              const remainingStock = product.stock - (inCartItem ? inCartItem.quantity : 0);
-              const isLowStock = remainingStock <= product.minStock;
-
-              return (
-                <div 
-                  key={product.id} 
-                  className="glass glass-hover product-card"
-                  onClick={() => addToCart(product)}
+          <>
+            {/* Barcode & Search Input */}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div className="search-input-wrapper">
+                <Barcode className="search-icon" size={20} />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Escanea con pistola de código de barras o escribe el nombre del producto (Presiona Enter)..."
+                  className="input-styled"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowWelcome(false);
+                  }}
+                  onKeyDown={handleSearchKeyDown}
+                  autoFocus
+                />
+              </div>
+              {searchQuery && (
+                <button 
+                  className="btn-secondary" 
+                  onClick={() => setSearchQuery('')}
+                  style={{ padding: '0 1rem' }}
                 >
-                  <div className="product-card-top">
-                    <span className="product-category-icon-wrapper" style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-main)', padding: '0.4rem', borderRadius: '8px' }}>
-                      {getCategoryIcon(product.category)}
-                    </span>
-                    <span className={`product-stock ${remainingStock <= 0 ? 'stock-low' : (isLowStock ? 'stock-low' : 'stock-ok')}`}>
-                      {remainingStock <= 0 ? 'Agotado' : `${remainingStock} ${product.unit}`}
-                    </span>
-                  </div>
-                  
-                  <div className="product-name">{product.name}</div>
-                  
-                  <div className="product-card-bottom">
-                    <span className="product-price">${product.price.toFixed(2)}</span>
-                    <button 
-                      className="btn-add-mini"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addToCart(product);
-                      }}
+                  Limpiar
+                </button>
+              )}
+            </div>
+
+            {/* Error Notification */}
+            {errorMessage && (
+              <div className="glass animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1.25rem', borderLeft: '4px solid var(--danger)', borderRadius: 'var(--radius-sm)', background: 'var(--danger-glow)', color: '#991b1b' }}>
+                <AlertTriangle size={18} style={{ color: 'var(--danger)' }} />
+                <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Categories Tabs */}
+            <div className="categories-tabs">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  className={`category-tab ${selectedCategory === cat ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedCategory(cat);
+                    setShowWelcome(false);
+                  }}
+                >
+                  {cat === 'Todos' ? '📂 Todos los Productos' : cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Catalog Grid */}
+            {filteredProducts.length === 0 ? (
+              <div className="glass empty-state" style={{ borderRadius: 'var(--radius-lg)' }}>
+                <ShoppingBasket size={44} />
+                <h3>No se encontraron productos</h3>
+                <p>Intenta buscar por código o nombre.</p>
+              </div>
+            ) : (
+              <div className="products-grid">
+                {filteredProducts.map(product => {
+                  const inCartItem = cart.find(item => item.product.id === product.id);
+                  const remainingStock = product.stock - (inCartItem ? inCartItem.quantity : 0);
+                  const isLowStock = remainingStock <= product.minStock;
+
+                  return (
+                    <div 
+                      key={product.id} 
+                      className="glass glass-hover product-card"
+                      onClick={() => addToCart(product)}
                     >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                      <div className="product-card-top">
+                        <span className="product-category-icon-wrapper" style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-main)', padding: '0.4rem', borderRadius: '8px' }}>
+                          {getCategoryIcon(product.category)}
+                        </span>
+                        <span className={`product-stock ${remainingStock <= 0 ? 'stock-low' : (isLowStock ? 'stock-low' : 'stock-ok')}`}>
+                          {remainingStock <= 0 ? 'Agotado' : `${remainingStock} ${product.unit}`}
+                        </span>
+                      </div>
+                      
+                      <div className="product-name">{product.name}</div>
+                      
+                      <div className="product-card-bottom">
+                        <span className="product-price">${product.price.toFixed(2)}</span>
+                        <button 
+                          className="btn-add-mini"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToCart(product);
+                          }}
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
 

@@ -559,9 +559,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   />
                 </div>
 
-                <div className="form-group span-2" style={{ background: 'var(--secondary-glow)', padding: '0.65rem', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', color: '#c7d2fe', fontWeight: 600 }}>Margen de Ganancia Estimado:</span>
-                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff' }}>{calculatedMargin}%</span>
+                <div className="form-group span-2" style={{ background: 'var(--bg-main)', border: '1px solid var(--border-color)', padding: '0.65rem', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Margen de Ganancia Estimado:</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent)' }}>{calculatedMargin}%</span>
                 </div>
 
                 <div className="form-group">
