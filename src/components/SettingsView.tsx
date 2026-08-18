@@ -10,15 +10,9 @@ import {
   RotateCcw, 
   CheckCircle2, 
   FileJson, 
-  ShieldAlert, 
-  Palette, 
-  Moon, 
-  Sun, 
-  Sparkles, 
-  Flame 
+  ShieldAlert 
 } from 'lucide-react';
 import { soundManager } from '../utils/audio';
-import type { AppTheme } from '../App';
 import type { StoreSettings, Product, Sale, CustomerAccount, CashMovement } from '../data/initialProducts';
 import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_CASH_MOVEMENTS, INITIAL_SALES, INITIAL_SETTINGS } from '../data/initialProducts';
 
@@ -28,8 +22,6 @@ interface SettingsViewProps {
   sales: Sale[];
   customers: CustomerAccount[];
   cashMovements: CashMovement[];
-  currentTheme: AppTheme;
-  onThemeChange: (theme: AppTheme) => void;
   onSaveSettings: (settings: StoreSettings) => void;
   onRestoreAllData: (data: {
     products: Product[];
@@ -46,8 +38,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   sales,
   customers,
   cashMovements,
-  currentTheme,
-  onThemeChange,
   onSaveSettings,
   onRestoreAllData
 }) => {
@@ -155,130 +145,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         )}
       </div>
 
-      {/* Theme Picker Section */}
-      <div className="glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', marginBottom: '0.5rem' }}>
-        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Palette size={20} style={{ color: 'var(--primary)' }} />
-          <span>Tema Visual y Paleta de Colores</span>
-        </h3>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-          Selecciona la combinación de colores que mejor se adapte a tu gusto o iluminación de la tienda.
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-          {/* Theme 1: Luxe */}
-          <div 
-            className="glass glass-hover" 
-            style={{ 
-              padding: '1.15rem', 
-              borderRadius: 'var(--radius-md)', 
-              cursor: 'pointer',
-              border: currentTheme === 'luxe' ? '2px solid #10b981' : '1px solid var(--border-color)',
-              background: currentTheme === 'luxe' ? 'rgba(16, 185, 129, 0.1)' : undefined
-            }}
-            onClick={() => onThemeChange('luxe')}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Moon size={16} style={{ color: '#10b981' }} />
-                <span>Obsidian Luxe (Oscuro)</span>
-              </span>
-              {currentTheme === 'luxe' && <CheckCircle2 size={16} style={{ color: '#10b981' }} />}
-            </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Fondo negro obsidiana con acentos esmeralda y oro.</p>
-            <div style={{ display: 'flex', gap: '0.35rem' }}>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#07090e', border: '1px solid #fff' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#10b981' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#6366f1' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#f59e0b' }}></div>
-            </div>
-          </div>
-
-          {/* Theme 2: Light */}
-          <div 
-            className="glass glass-hover" 
-            style={{ 
-              padding: '1.15rem', 
-              borderRadius: 'var(--radius-md)', 
-              cursor: 'pointer',
-              border: currentTheme === 'light' ? '2px solid #059669' : '1px solid var(--border-color)',
-              background: currentTheme === 'light' ? 'rgba(5, 150, 105, 0.1)' : undefined
-            }}
-            onClick={() => onThemeChange('light')}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Sun size={16} style={{ color: '#059669' }} />
-                <span>Clean Minimal (Claro)</span>
-              </span>
-              {currentTheme === 'light' && <CheckCircle2 size={16} style={{ color: '#059669' }} />}
-            </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Estilo Apple / Square POS blanco puro y súper nítido.</p>
-            <div style={{ display: 'flex', gap: '0.35rem' }}>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#f8fafc', border: '1px solid #ccc' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#059669' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#4f46e5' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#0f172a' }}></div>
-            </div>
-          </div>
-
-          {/* Theme 3: Cyber */}
-          <div 
-            className="glass glass-hover" 
-            style={{ 
-              padding: '1.15rem', 
-              borderRadius: 'var(--radius-md)', 
-              cursor: 'pointer',
-              border: currentTheme === 'cyber' ? '2px solid #a855f7' : '1px solid var(--border-color)',
-              background: currentTheme === 'cyber' ? 'rgba(168, 85, 247, 0.1)' : undefined
-            }}
-            onClick={() => onThemeChange('cyber')}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Sparkles size={16} style={{ color: '#a855f7' }} />
-                <span>Cyberpunk Violet</span>
-              </span>
-              {currentTheme === 'cyber' && <CheckCircle2 size={16} style={{ color: '#a855f7' }} />}
-            </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Noche violeta eléctrica con acentos cian y rosa neón.</p>
-            <div style={{ display: 'flex', gap: '0.35rem' }}>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#080612', border: '1px solid #a855f7' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#a855f7' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#06b6d4' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#ec4899' }}></div>
-            </div>
-          </div>
-
-          {/* Theme 4: Sunset */}
-          <div 
-            className="glass glass-hover" 
-            style={{ 
-              padding: '1.15rem', 
-              borderRadius: 'var(--radius-md)', 
-              cursor: 'pointer',
-              border: currentTheme === 'sunset' ? '2px solid #f97316' : '1px solid var(--border-color)',
-              background: currentTheme === 'sunset' ? 'rgba(249, 115, 22, 0.1)' : undefined
-            }}
-            onClick={() => onThemeChange('sunset')}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Flame size={16} style={{ color: '#f97316' }} />
-                <span>Sunset Tiendita (Cálido)</span>
-              </span>
-              {currentTheme === 'sunset' && <CheckCircle2 size={16} style={{ color: '#f97316' }} />}
-            </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Tonos terracota, miel dorada y madera cálida.</p>
-            <div style={{ display: 'flex', gap: '0.35rem' }}>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#0c0908', border: '1px solid #f97316' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#f97316' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#eab308' }}></div>
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#fff7ed' }}></div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1.5rem' }}>
         {/* Settings Form */}

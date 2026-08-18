@@ -9,11 +9,7 @@ import {
   Store, 
   Volume2, 
   VolumeX, 
-  Clock, 
-  Sun, 
-  Moon, 
-  Sparkles, 
-  Flame 
+  Clock 
 } from 'lucide-react';
 import { POSView } from './components/POSView';
 import { InventoryView } from './components/InventoryView';
@@ -46,8 +42,6 @@ export type AppTheme = 'luxe' | 'light' | 'cyber' | 'sunset';
 function App() {
   const [activeView, setActiveView] = useState<ActiveView>('pos');
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [theme, setTheme] = useState<AppTheme>('light');
-
   // Global Business State
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
@@ -63,16 +57,8 @@ function App() {
 
   // Theme synchronization with document
   useEffect(() => {
-    const savedTheme = (localStorage.getItem('lichita_theme') as AppTheme) || 'light';
-    setTheme(savedTheme);
-    document.documentElement.setAttribute('data-theme', savedTheme);
+    document.documentElement.setAttribute('data-theme', 'light');
   }, []);
-
-  const handleThemeChange = (newTheme: AppTheme) => {
-    setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('lichita_theme', newTheme);
-  };
 
   // Initialize and Seed from localStorage
   useEffect(() => {
@@ -333,37 +319,6 @@ function App() {
             <span>Ajustes</span>
           </button>
 
-          {/* Theme Quick Selector */}
-          <div className="theme-selector" title="Cambiar Tema Visual">
-            <button 
-              className={`theme-pill-btn ${theme === 'luxe' ? 'active' : ''}`} 
-              onClick={() => handleThemeChange('luxe')}
-              title="Tema Luxe Obsidian"
-            >
-              <Moon size={14} />
-            </button>
-            <button 
-              className={`theme-pill-btn ${theme === 'light' ? 'active' : ''}`} 
-              onClick={() => handleThemeChange('light')}
-              title="Tema Claro Minimalista"
-            >
-              <Sun size={14} />
-            </button>
-            <button 
-              className={`theme-pill-btn ${theme === 'cyber' ? 'active' : ''}`} 
-              onClick={() => handleThemeChange('cyber')}
-              title="Tema Cyberpunk Violeta"
-            >
-              <Sparkles size={14} />
-            </button>
-            <button 
-              className={`theme-pill-btn ${theme === 'sunset' ? 'active' : ''}`} 
-              onClick={() => handleThemeChange('sunset')}
-              title="Tema Sunset Cálido"
-            >
-              <Flame size={14} />
-            </button>
-          </div>
 
           <button 
             className="icon-btn" 
@@ -423,7 +378,6 @@ function App() {
             products={products}
           />
         )}
-
         {activeView === 'settings' && (
           <SettingsView 
             settings={settings}
@@ -431,8 +385,6 @@ function App() {
             sales={sales}
             customers={customers}
             cashMovements={cashMovements}
-            currentTheme={theme}
-            onThemeChange={handleThemeChange}
             onSaveSettings={handleSaveSettings}
             onRestoreAllData={handleRestoreAllData}
           />
