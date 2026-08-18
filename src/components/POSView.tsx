@@ -13,10 +13,36 @@ import {
   PlusCircle, 
   BookOpen, 
   QrCode, 
-  Barcode 
+  Barcode,
+  GlassWater,
+  Cookie,
+  Milk,
+  Package,
+  Sparkles,
+  Candy,
+  Flame
 } from 'lucide-react';
 import { soundManager } from '../utils/audio';
 import type { Product, Sale, CustomerAccount, StoreSettings } from '../data/initialProducts';
+
+export const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case 'Bebidas':
+      return <GlassWater size={18} style={{ color: 'var(--secondary)' }} />;
+    case 'Botanas':
+      return <Flame size={18} style={{ color: 'var(--accent)' }} />;
+    case 'Panadería':
+      return <Cookie size={18} style={{ color: 'var(--accent)' }} />;
+    case 'Lácteos':
+      return <Milk size={18} style={{ color: 'var(--primary)' }} />;
+    case 'Limpieza':
+      return <Sparkles size={18} style={{ color: 'var(--info)' }} />;
+    case 'Dulces':
+      return <Candy size={18} style={{ color: 'var(--danger)' }} />;
+    default:
+      return <Package size={18} style={{ color: 'var(--text-muted)' }} />;
+  }
+};
 
 interface POSViewProps {
   products: Product[];
@@ -459,7 +485,9 @@ export const POSView: React.FC<POSViewProps> = ({
                   onClick={() => addToCart(product)}
                 >
                   <div className="product-card-top">
-                    <span className="product-emoji">{product.emoji || '📦'}</span>
+                    <span className="product-category-icon-wrapper" style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-main)', padding: '0.4rem', borderRadius: '8px' }}>
+                      {getCategoryIcon(product.category)}
+                    </span>
                     <span className={`product-stock ${remainingStock <= 0 ? 'stock-low' : (isLowStock ? 'stock-low' : 'stock-ok')}`}>
                       {remainingStock <= 0 ? 'Agotado' : `${remainingStock} ${product.unit}`}
                     </span>

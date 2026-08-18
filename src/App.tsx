@@ -46,7 +46,7 @@ export type AppTheme = 'luxe' | 'light' | 'cyber' | 'sunset';
 function App() {
   const [activeView, setActiveView] = useState<ActiveView>('pos');
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [theme, setTheme] = useState<AppTheme>('luxe');
+  const [theme, setTheme] = useState<AppTheme>('light');
 
   // Global Business State
   const [products, setProducts] = useState<Product[]>([]);
@@ -63,7 +63,7 @@ function App() {
 
   // Theme synchronization with document
   useEffect(() => {
-    const savedTheme = (localStorage.getItem('lichita_theme') as AppTheme) || 'luxe';
+    const savedTheme = (localStorage.getItem('lichita_theme') as AppTheme) || 'light';
     setTheme(savedTheme);
     document.documentElement.setAttribute('data-theme', savedTheme);
   }, []);

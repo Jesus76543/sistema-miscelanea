@@ -4,8 +4,47 @@
    THEME DEFINITIONS & COLOR PALETTES
    ========================================================================== */
 
-/* 1. Luxe Dark (Default: Obsidian Black, Mint/Emerald & Gold) */
-:root, [data-theme="luxe"] {
+/* 1. Clean Light (Default: Apple / Stripe POS Style Minimalist) */
+:root, [data-theme="light"] {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --bg-main: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.92);
+  --bg-card-hover: #f1f5f9;
+  --header-bg: rgba(255, 255, 255, 0.94);
+  
+  --border-color: rgba(15, 23, 42, 0.08);
+  --border-glow: rgba(5, 150, 105, 0.25);
+  
+  --primary: #059669; /* Deep Emerald */
+  --primary-glow: rgba(5, 150, 105, 0.12);
+  --primary-hover: #047857;
+  
+  --secondary: #4f46e5; /* Royal Indigo */
+  --secondary-glow: rgba(79, 70, 229, 0.12);
+  --secondary-hover: #4338ca;
+  
+  --accent: #d97706; /* Rich Amber */
+  --accent-glow: rgba(217, 119, 6, 0.12);
+  
+  --danger: #e11d48; /* Crimson */
+  --danger-glow: rgba(225, 29, 72, 0.12);
+
+  --info: #0284c7; /* Sky Blue */
+  --info-glow: rgba(2, 132, 199, 0.12);
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  
+  --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.06);
+  --input-bg: #ffffff;
+}
+
+/* 2. Luxe Dark (Obsidian Black, Mint/Emerald & Gold) */
+[data-theme="luxe"] {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   
@@ -41,42 +80,6 @@
   
   --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.4);
   --input-bg: rgba(13, 17, 26, 0.85);
-}
-
-/* 2. Clean Light (Apple / Stripe POS Style Minimalist) */
-[data-theme="light"] {
-  --bg-main: #f1f5f9;
-  --bg-surface: #ffffff;
-  --bg-card: rgba(255, 255, 255, 0.92);
-  --bg-card-hover: #ffffff;
-  --header-bg: rgba(255, 255, 255, 0.94);
-  
-  --border-color: rgba(15, 23, 42, 0.08);
-  --border-glow: rgba(5, 150, 105, 0.25);
-  
-  --primary: #059669; /* Deep Emerald */
-  --primary-glow: rgba(5, 150, 105, 0.12);
-  --primary-hover: #047857;
-  
-  --secondary: #4f46e5; /* Royal Indigo */
-  --secondary-glow: rgba(79, 70, 229, 0.12);
-  --secondary-hover: #4338ca;
-  
-  --accent: #d97706; /* Rich Amber */
-  --accent-glow: rgba(217, 119, 6, 0.12);
-  
-  --danger: #e11d48; /* Crimson */
-  --danger-glow: rgba(225, 29, 72, 0.12);
-
-  --info: #0284c7; /* Sky Blue */
-  --info-glow: rgba(2, 132, 199, 0.12);
-  
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  
-  --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.06);
-  --input-bg: #ffffff;
 }
 
 /* 3. Cyber Violet (Futuristic Midnight & Neon Violet/Cyan) */

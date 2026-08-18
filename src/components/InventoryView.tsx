@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { soundManager } from '../utils/audio';
 import type { Product } from '../data/initialProducts';
+import { getCategoryIcon } from './POSView';
 
 interface InventoryViewProps {
   products: Product[];
@@ -346,7 +347,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                 return (
                   <tr key={product.id}>
-                    <td style={{ fontSize: '1.25rem' }}>{product.emoji || '📦'}</td>
+                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{getCategoryIcon(product.category)}</td>
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--secondary)', fontWeight: 600 }}>
                       {product.id}
                     </td>
@@ -432,7 +433,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <div key={product.id} className="glass glass-hover" style={{ padding: '1.25rem', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '190px' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>{product.emoji || '📦'}</span>
+                    <span style={{ display: 'inline-flex', padding: '0.4rem', background: 'var(--bg-main)', borderRadius: '8px', alignItems: 'center' }}>{getCategoryIcon(product.category)}</span>
                     <span className={`badge-stock ${isLowStock ? 'low' : 'normal'}`}>
                       {product.stock <= 0 ? 'Agotado' : `Stock: ${product.stock}`}
                     </span>
@@ -479,7 +480,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
             <form onSubmit={handleSubmit}>
               <div className="form-grid">
-                <div className="form-group">
+                <div className="form-group span-2">
                   <label className="form-label">Código de Barras / SKU</label>
                   <input
                     type="text"
@@ -487,16 +488,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     value={formId}
                     onChange={(e) => setFormId(e.target.value)}
                     required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Ícono / Emoji</label>
-                  <input
-                    type="text"
-                    className="input-styled"
-                    value={formEmoji}
-                    onChange={(e) => setFormEmoji(e.target.value)}
                   />
                 </div>
 
